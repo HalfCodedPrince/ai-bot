@@ -1,9 +1,12 @@
 from google.genai import types
+from config import WORKING_DIR
+from tools import FUNCTION_DICT
 
 from functions.get_files_info import get_files_info
 from functions.get_file_content import get_file_content
 from functions.write_file import write_file
 from functions.run_python_file import run_python_file
+
 
 # interpeter for actually calling the specified function and then returning the result back to LLM
 
@@ -13,16 +16,10 @@ def call_function(function_call_part, verbose=False):
     args_dict = function_call_part.args.copy()
 
     # simply add the working directory to the dict, since I'm unpacking it anyway. 
-    working_dir = "./calculator"
-    args_dict["working_directory"] = working_dir
+    args_dict["working_directory"] = WORKING_DIR
 
-    # will move the dict to config later
-    current_func_dict = {
-        "get_files_info": get_files_info,
-        "get_file_content": get_file_content,
-        "write_file": write_file,
-        "run_python_file": run_python_file,
-        }
+    # current functions for LLM to call, stored in the dict in root/tools.py
+    current_func_dict = FUNCTION_DICT
     
     selected_function = current_func_dict.get(function_called_str)
 

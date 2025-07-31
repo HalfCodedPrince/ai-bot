@@ -1,14 +1,13 @@
 import os
 import sys
 import pprint
+
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types 
+from google.genai import types
 
-from functions.get_files_info import schema_get_files_info
-from functions.get_file_content import schema_get_content
-from functions.write_file import schema_write_file
-from functions.run_python_file import schema_run_python_file
+from config import MAX_ITER, SYSTEM_PROMPT
+from tools import SCHEMA_LIST
 
 from functions.call_function import call_function
 from functions.process_response import process_response
@@ -17,26 +16,15 @@ load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-# max_iterations - how many times feedback loop will run until either stopping or returning an answer
 # messages - message history, so far kept in RAM. 
+messages = []
+
+# max_iterations - how many times feedback loop will run until either stopping or returning an answer
 # system promt is a roleplay paramater for GenerateContentConfig
 # available functions - schemas for the LLM, basically telling it "here's a thing you can use" 
-max_iterations = 20
-messages = []
-system_promt = """
-You are a helpful AI coding agent.
-
-When a user asks a question or makes a request, make a plan and use your available tools to find the answer _even if you're not sure of the file names or structure at first_. 
-
-You can:
-- List files and directories
-- Read file contents
-- Execute Python files with optional arguments
-- Write or overwrite files
-
-If you need to discover something, use the tools to explore. Do NOT ask the user questions that you can answer with a tool call.
-"""
-available_functions = types.Tool(function_declarations=[schema_get_files_info, schema_get_content, schema_write_file, schema_run_python_file])
+max_iterations = MAX_ITER
+system_promt = SYSTEM_PROMPT 
+available_functions = types.Tool(function_declarations=SCHEMA_LIST)
 
 
 def get_prompt():
@@ -74,7 +62,7 @@ def create_feedback_loop(response):
                 messages.append(candidate_answer.content)
     
     # Then, pretending there ain't no "D" in "DRY", repeat a slitghly changed bit from process_response
-    # check if there were function calls; if there were, return the types.content object for each function via functions/call_function.py (return is already formatted correctly)
+    # Check if there were function calls; if there were, return the types.content object for each function via functions/call_function.py (return is already formatted correctly)
     if response.function_calls and hasattr(response, "function_response"):
         for function in response.function_calls:
             function_call_result = call_function(function)
